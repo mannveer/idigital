@@ -13,6 +13,12 @@ declare global {
   }
 }
 
+interface CountryCode {
+  code: string;
+  name: string;
+  flag: string;
+}
+
 @Component({
   selector: 'app-checkout',
   standalone: true,
@@ -103,14 +109,40 @@ declare global {
             <div class="form-group">
               <label for="phone">Mobile Number</label>
               <div class="phone-input">
-                <select id="countryCode" formControlName="countryCode">
-                  <option value="+1">+1 (USA)</option>
-                  <option value="+44">+44 (UK)</option>
-                  <option value="+91">+91 (India)</option>
-                  <option value="+61">+61 (Australia)</option>
-                  <option value="+86">+86 (China)</option>
-                  <!-- Add more country codes as needed -->
-                </select>
+                <div class="country-select" (click)="toggleCountryDropdown()">
+                  <div class="selected-country">
+                    <span class="country-flag">{{ selectedCountry.flag }}</span>
+                    <span class="country-code">{{ selectedCountry.code }}</span>
+                    <i class="fas fa-chevron-down"></i>
+                  </div>
+                  @if (showCountryDropdown) {
+                    <div class="country-dropdown">
+                      <div class="country-search">
+                        <input 
+                          type="text" 
+                          placeholder="Search countries..."
+                          (input)="filterCountries($event)"
+                          (click)="$event.stopPropagation()"
+                          #searchInput
+                        >
+                        <i class="fas fa-search"></i>
+                      </div>
+                      <div class="country-list">
+                        @for (country of filteredCountries; track country.code) {
+                          <div 
+                            class="country-option" 
+                            [class.selected]="selectedCountry.code === country.code"
+                            (click)="selectCountry(country); $event.stopPropagation()"
+                          >
+                            <span class="country-flag">{{ country.flag }}</span>
+                            <span class="country-name">{{ country.name }}</span>
+                            <span class="country-code">{{ country.code }}</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
                 <input 
                   type="tel" 
                   id="phone" 
@@ -432,15 +464,154 @@ declare global {
     .phone-input {
       display: grid;
       grid-template-columns: 140px 1fr;
-      gap: 0.5rem;
+      gap: 1rem;
+      align-items: start;
     }
 
-    select {
-      padding-right: 2rem;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%236B7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 0.5rem center;
+    .country-select {
+      position: relative;
+      width: 100%;
+      z-index: 100;
+    }
+
+    .selected-country {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: var(--color-background);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      height: 48px;
+      box-sizing: border-box;
+
+      &:hover {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 1px var(--color-primary);
+      }
+
+      .country-flag {
+        font-size: 1.25rem;
+      }
+
+      .country-code {
+        font-weight: 500;
+        color: var(--color-text);
+      }
+
+      i {
+        margin-left: auto;
+        color: var(--color-text-light);
+        transition: transform 0.3s ease;
+      }
+    }
+
+    .country-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      width: 320px;
+      max-height: 400px;
+      background: var(--color-background);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      overflow: hidden;
+    }
+
+    .country-search {
+      padding: 1rem;
+      border-bottom: 1px solid var(--color-border);
+
+      input {
+        width: 100%;
+        padding: 0.75rem 2.5rem 0.75rem 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        background: var(--color-background);
+        color: var(--color-text);
+        font-size: 0.875rem;
+
+        &::placeholder {
+          color: var(--color-text-light);
+        }
+
+        &:focus {
+          outline: none;
+          border-color: var(--color-primary);
+          box-shadow: 0 0 0 1px var(--color-primary);
+        }
+      }
+
+      i {
+        position: absolute;
+        right: 1.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--color-text-light);
+        pointer-events: none;
+      }
+    }
+
+    .country-list {
+      max-height: 300px;
+      overflow-y: auto;
+
+      &::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: var(--color-background-light);
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: var(--color-border);
+        border-radius: 4px;
+
+        &:hover {
+          background: var(--color-text-light);
+        }
+      }
+    }
+
+    .country-option {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: var(--color-background-light);
+      }
+
+      &.selected {
+        background: var(--color-primary);
+        color: white;
+
+        .country-code {
+          color: rgba(255, 255, 255, 0.8);
+        }
+      }
+
+      .country-flag {
+        font-size: 1.25rem;
+      }
+
+      .country-name {
+        flex: 1;
+        font-size: 0.875rem;
+      }
+
+      .country-code {
+        font-size: 0.875rem;
+        color: var(--color-text-light);
+      }
     }
 
     .error-message {
@@ -486,13 +657,41 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   private productService = inject(ProductService);
   private fb = inject(FormBuilder);
 
+  showCountryDropdown = false;
+  selectedCountry: CountryCode = {
+    code: '+91',
+    name: 'India',
+    flag: '🇮🇳'
+  };
+  
+  countries: CountryCode[] = [
+    { code: '+91', name: 'India', flag: '🇮🇳' },
+    { code: '+1', name: 'United States', flag: '🇺🇸' },
+    { code: '+44', name: 'United Kingdom', flag: '🇬🇧' },
+    { code: '+61', name: 'Australia', flag: '🇦🇺' },
+    { code: '+86', name: 'China', flag: '🇨🇳' },
+    { code: '+81', name: 'Japan', flag: '🇯🇵' },
+    { code: '+49', name: 'Germany', flag: '🇩🇪' },
+    { code: '+33', name: 'France', flag: '🇫🇷' },
+    { code: '+39', name: 'Italy', flag: '🇮🇹' },
+    { code: '+7', name: 'Russia', flag: '🇷🇺' },
+    { code: '+82', name: 'South Korea', flag: '🇰🇷' },
+    { code: '+55', name: 'Brazil', flag: '🇧🇷' },
+    { code: '+52', name: 'Mexico', flag: '🇲🇽' },
+    { code: '+34', name: 'Spain', flag: '🇪🇸' },
+    { code: '+1', name: 'Canada', flag: '🇨🇦' }
+  ];
+
+  filteredCountries: CountryCode[] = this.countries;
+
   checkoutForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
-    countryCode: ['+1', Validators.required],
+    countryCode: ['+91', Validators.required],
     phone: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]]
   });
 
   constructor() {
+    document.addEventListener('click', this.closeCountryDropdown.bind(this));
   }
 
   ngOnInit(): void {
@@ -583,5 +782,31 @@ export class CheckoutComponent implements OnInit, OnDestroy {
 
     const razorpay = new window.Razorpay(options);
     razorpay.open();
+  }
+
+  toggleCountryDropdown(): void {
+    this.showCountryDropdown = !this.showCountryDropdown;
+  }
+
+  closeCountryDropdown(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.country-select')) {
+      this.showCountryDropdown = false;
+    }
+  }
+
+  selectCountry(country: CountryCode): void {
+    this.selectedCountry = country;
+    this.checkoutForm.patchValue({ countryCode: country.code });
+    this.showCountryDropdown = false;
+  }
+
+  filterCountries(event: Event): void {
+    event.stopPropagation();
+    const searchTerm = (event.target as HTMLInputElement).value.toLowerCase();
+    this.filteredCountries = this.countries.filter(country =>
+      country.name.toLowerCase().includes(searchTerm) ||
+      country.code.toLowerCase().includes(searchTerm)
+    );
   }
 } 
