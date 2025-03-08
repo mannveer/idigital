@@ -1,6 +1,6 @@
 import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { CartService, CartItem } from '../../services/cart.service';
 import { ThemeService } from '../../services/theme.service';
 import { Observable, Subscription } from 'rxjs';
@@ -81,6 +81,11 @@ import { Observable, Subscription } from 'rxjs';
     :host {
       display: block;
       -webkit-tap-highlight-color: transparent;
+      height: 70px;
+
+      @media (max-width: 480px) {
+        height: 60px;
+      }
     }
 
     .header {
@@ -293,7 +298,7 @@ import { Observable, Subscription } from 'rxjs';
     .mobile-menu {
       display: none;
       position: fixed;
-      top: 60px; /* Align with header height */
+      top: 60px;
       left: 0;
       right: 0;
       bottom: 0;
@@ -326,7 +331,7 @@ import { Observable, Subscription } from 'rxjs';
       left: 0;
       width: 100%;
       background: var(--surface-color);
-      padding: 1rem;
+      padding: 0.75rem;
       transform: translateY(-100%);
       transition: all 0.3s ease;
       opacity: 0;
@@ -334,13 +339,13 @@ import { Observable, Subscription } from 'rxjs';
       border-bottom: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.25rem;
 
       a, button {
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        padding: 0.875rem 1rem;
+        padding: 0.75rem;
         width: 100%;
         color: var(--text-color);
         text-decoration: none;
@@ -367,7 +372,9 @@ import { Observable, Subscription } from 'rxjs';
 
         .cart-badge {
           position: absolute;
-          right: 1rem;
+          right: 0.75rem;
+          top: 50%;
+          transform: translateY(-50%);
           background: var(--primary-color);
           color: white;
           font-size: 0.75rem;
@@ -395,15 +402,10 @@ import { Observable, Subscription } from 'rxjs';
         }
       }
 
-      .cart-link {
-        order: 4;
-      }
-
       .theme-toggle {
-        order: 5;
         border-top: 1px solid var(--border-color);
-        margin-top: 0.5rem;
-        padding-top: 1rem;
+        margin-top: 0.25rem;
+        padding-top: 0.75rem;
       }
     }
 
@@ -454,9 +456,18 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   constructor(
     private cartService: CartService,
-    private themeService: ThemeService
+    private themeService: ThemeService,
+    private router: Router
   ) {
     this.isDarkMode$ = this.themeService.isDarkMode$;
+
+    // Subscribe to router events to handle scrolling
+    this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        window.scrollTo(0, 0);
+        this.closeMobileMenu();
+      }
+    });
   }
 
   ngOnInit() {
