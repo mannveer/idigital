@@ -42,10 +42,11 @@ import { Subscription } from 'rxjs';
   `,
   styles: [`
     .product-card {
-      background: white;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
       border-radius: 1rem;
       overflow: hidden;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      box-shadow: var(--shadow-sm);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
       height: 100%;
@@ -55,7 +56,7 @@ import { Subscription } from 'rxjs';
 
     .product-card:hover {
       transform: translateY(-4px);
-      box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-md);
     }
 
     .product-image {
@@ -86,11 +87,12 @@ import { Subscription } from 'rxjs';
     .product-file-type {
       padding: 0.5rem 1rem;
       border-radius: 2rem;
-      background: rgba(255, 255, 255, 0.9);
+      background: var(--surface-color);
       backdrop-filter: blur(4px);
       font-size: 0.8rem;
       font-weight: 500;
       color: var(--primary-color);
+      border: 1px solid var(--border-color);
     }
 
     .product-info {
@@ -98,6 +100,7 @@ import { Subscription } from 'rxjs';
       flex: 1;
       display: flex;
       flex-direction: column;
+      background: var(--surface-color);
     }
 
     .product-title {
@@ -106,6 +109,11 @@ import { Subscription } from 'rxjs';
       color: var(--text-color);
       margin: 0 0 0.5rem;
       line-height: 1.4;
+      transition: color 0.3s ease;
+
+      &:hover {
+        color: var(--primary-color);
+      }
     }
 
     .product-description {
@@ -122,7 +130,7 @@ import { Subscription } from 'rxjs';
       align-items: center;
       margin-top: auto;
       padding-top: 1rem;
-      border-top: 1px solid var(--surface-color);
+      border-top: 1px solid var(--border-color);
     }
 
     .product-price {

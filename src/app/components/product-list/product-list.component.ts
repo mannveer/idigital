@@ -7,14 +7,15 @@ import { CartService } from '../../services/cart.service';
 import { Product } from '../../models/product';
 import { register } from 'swiper/element/bundle';
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { Subscription, Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { FormsModule } from '@angular/forms';
 
 register();
 
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, ProductCardComponent],
+  imports: [CommonModule, RouterModule, FormsModule, ProductCardComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
     <div>
@@ -22,16 +23,48 @@ register();
         <div class="hero-content">
           <h1 class="hero-title">Discover Premium Digital Assets</h1>
           <p class="hero-subtitle">Find the perfect digital resources for your next creative project</p>
-          <div class="search-box">
-            <input 
-              type="text" 
-              placeholder="Search digital assets..." 
-              (input)="onSearch($event)"
-              class="search-input"
-            >
-            <button class="search-button">
-              <i class="material-icons">search</i>
-            </button>
+          <div class="search-container">
+            <div class="search-box">
+              <input 
+                type="text" 
+                placeholder="Search digital assets..." 
+                (input)="onSearch($event)"
+                [(ngModel)]="searchQuery"
+                class="search-input"
+              >
+              <button class="search-button">
+                @if (isSearching) {
+                  <div class="spinner"></div>
+                } @else {
+                  <i class="material-icons">search</i>
+                }
+              </button>
+            </div>
+            @if (showSearchResults && searchResults.length > 0) {
+              <div class="search-results">
+                @for (product of searchResults; track product.id) {
+                  <div 
+                    class="search-result-item" 
+                    [routerLink]="['/product', product.id]"
+                    (click)="closeSearchResults()"
+                  >
+                    <img [src]="product.thumbnailUrl" [alt]="product.name" class="result-image">
+                    <div class="result-info">
+                      <h4>{{ product.name }}</h4>
+                      <p>{{ product.category }}</p>
+                      <span class="result-price">{{ product.price | currency }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else if (showSearchResults && searchQuery && !isSearching) {
+              <div class="search-results">
+                <div class="no-results">
+                  <i class="material-icons">search_off</i>
+                  <p>No results found for "{{ searchQuery }}"</p>
+                </div>
+              </div>
+            }
           </div>
           <div class="hero-stats">
             <div class="stat-item">
@@ -217,14 +250,21 @@ register();
       opacity: 0.9;
     }
 
-    .search-box {
-      display: flex;
+    .search-container {
+      position: relative;
       max-width: 600px;
       margin: 0 auto 3rem;
-      background: white;
+    }
+
+    .search-box {
+      display: flex;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
       border-radius: 0.5rem;
       overflow: hidden;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      z-index: 1001;
     }
 
     .search-input {
@@ -233,9 +273,15 @@ register();
       border: none;
       font-size: 1rem;
       outline: none;
+      background: transparent;
+      color: var(--text-color);
 
       &::placeholder {
         color: var(--text-color-secondary);
+      }
+
+      &.has-results {
+        border-bottom-left-radius: 0;
       }
     }
 
@@ -245,7 +291,7 @@ register();
       border: none;
       color: white;
       cursor: pointer;
-      transition: background-color 0.3s ease;
+      transition: all 0.3s ease;
 
       &:hover {
         background: var(--primary-color-hover);
@@ -253,6 +299,101 @@ register();
 
       i {
         font-size: 1.5rem;
+        transition: transform 0.3s ease;
+      }
+
+      &:hover i {
+        transform: scale(1.1);
+      }
+    }
+
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      box-shadow: var(--shadow-md);
+      margin-top: 0.5rem;
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 1000;
+    }
+
+    .search-result-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: var(--hover-color);
+      }
+
+      &:not(:last-child) {
+        border-bottom: 1px solid var(--border-color);
+      }
+    }
+
+    .result-image {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 0.5rem;
+    }
+
+    .result-info {
+      flex: 1;
+
+      h4 {
+        margin: 0 0 0.25rem;
+        font-size: 1rem;
+        color: var(--text-color);
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.875rem;
+        color: var(--text-color-secondary);
+      }
+    }
+
+    .result-price {
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    .no-results {
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-color-secondary);
+
+      i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        margin: 0;
+      }
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
       }
     }
 
@@ -298,7 +439,7 @@ register();
     .featured-section {
       position: relative;
       padding: 8rem 0;
-      background: linear-gradient(to bottom, var(--surface-color) 0%, white 100%);
+      background: var(--surface-color);
       overflow: hidden;
     }
 
@@ -343,15 +484,17 @@ register();
     }
 
     .featured-card {
-      background: white;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
       border-radius: 1rem;
       overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s ease;
 
       &:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary-color);
       }
     }
 
@@ -393,12 +536,13 @@ register();
     }
 
     .featured-category {
-      background: rgba(255, 255, 255, 0.9);
+      background: var(--surface-color);
       color: var(--text-color);
       padding: 0.5rem 1rem;
       border-radius: 2rem;
       font-size: 0.875rem;
       text-transform: capitalize;
+      border: 1px solid var(--border-color);
     }
 
     .featured-content {
@@ -409,6 +553,11 @@ register();
         font-weight: 600;
         margin-bottom: 1rem;
         color: var(--text-color);
+        transition: color 0.3s ease;
+
+        &:hover {
+          color: var(--primary-color);
+        }
       }
 
       p {
@@ -427,7 +576,7 @@ register();
       align-items: center;
       margin-top: 1.5rem;
       padding-top: 1.5rem;
-      border-top: 1px solid var(--surface-color);
+      border-top: 1px solid var(--border-color);
     }
 
     .featured-author {
@@ -479,9 +628,10 @@ register();
     swiper-container::part(button-next) {
       width: 3rem;
       height: 3rem;
-      background: white;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
       border-radius: 50%;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-sm);
       color: var(--primary-color);
       transition: all 0.3s ease;
 
@@ -528,24 +678,28 @@ register();
       flex-direction: column;
       align-items: center;
       padding: 2rem;
-      background: white;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
       border-radius: 0.5rem;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      box-shadow: var(--shadow-sm);
       text-decoration: none;
       color: var(--text-color);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      transition: all 0.3s ease;
 
       &:hover {
         transform: translateY(-5px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary-color);
       }
 
       &.active {
         background: var(--primary-color);
         color: white;
+        border-color: var(--primary-color);
 
         .category-icon {
           background: rgba(255, 255, 255, 0.2);
+          color: white;
         }
 
         p {
@@ -560,9 +714,11 @@ register();
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--surface-color);
+      background: var(--hover-color);
+      color: var(--primary-color);
       border-radius: 50%;
       margin-bottom: 1.5rem;
+      transition: all 0.3s ease;
 
       i {
         font-size: 32px;
@@ -573,6 +729,7 @@ register();
       font-size: 1.25rem;
       font-weight: 600;
       margin-bottom: 0.5rem;
+      color: var(--text-color);
     }
 
     .category-card p {
@@ -583,7 +740,7 @@ register();
 
     .products-section {
       padding: 6rem 0;
-      background: var(--surface-color);
+      background: var(--background-color);
     }
 
     .products-grid {
@@ -647,11 +804,25 @@ export class ProductListComponent implements OnInit, OnDestroy, AfterViewInit {
   filteredProducts: Product[] = [];
   currentCategory: string = 'all';
   private cartSubscription?: Subscription;
+  private searchSubject = new Subject<string>();
+  private searchSubscription?: Subscription;
+  isSearching: boolean = false;
+  showSearchResults: boolean = false;
+  searchResults: Product[] = [];
+  searchQuery: string = '';
 
   constructor(
     private productService: ProductService,
     private cartService: CartService
-  ) {}
+  ) {
+    // Initialize search subscription with debounce
+    this.searchSubscription = this.searchSubject.pipe(
+      debounceTime(300), // Wait 300ms after the last event
+      distinctUntilChanged() // Only emit if the value has changed
+    ).subscribe(searchTerm => {
+      this.filterProducts(searchTerm);
+    });
+  }
 
   ngOnInit() {
     console.log('ProductListComponent initializing...');
@@ -659,12 +830,62 @@ export class ProductListComponent implements OnInit, OnDestroy, AfterViewInit {
     this.cartSubscription = this.cartService.cartItems$.subscribe(() => {
       // Cart state has changed, component will re-render
     });
+
+    // Close search results when clicking outside
+    document.addEventListener('click', this.handleClickOutside.bind(this));
   }
 
   ngOnDestroy() {
     if (this.cartSubscription) {
       this.cartSubscription.unsubscribe();
     }
+    if (this.searchSubscription) {
+      this.searchSubscription.unsubscribe();
+    }
+    document.removeEventListener('click', this.handleClickOutside.bind(this));
+  }
+
+  private handleClickOutside(event: MouseEvent) {
+    const searchContainer = document.querySelector('.search-container');
+    if (searchContainer && !searchContainer.contains(event.target as Node)) {
+      this.showSearchResults = false;
+    }
+  }
+
+  onSearch(event: Event) {
+    const searchTerm = (event.target as HTMLInputElement).value;
+    this.searchQuery = searchTerm;
+    this.showSearchResults = searchTerm.length > 0;
+    this.searchSubject.next(searchTerm);
+  }
+
+  private filterProducts(searchTerm: string) {
+    if (!searchTerm || searchTerm.trim().length === 0) {
+      this.filteredProducts = this.currentCategory === 'all' 
+        ? this.products 
+        : this.products.filter(p => p.category.toLowerCase() === this.currentCategory.toLowerCase());
+      this.searchResults = [];
+      this.isSearching = false;
+      return;
+    }
+
+    this.isSearching = true;
+    this.productService.searchProducts(searchTerm).subscribe(results => {
+      this.searchResults = results.slice(0, 5); // Show top 5 results in dropdown
+      this.filteredProducts = this.currentCategory === 'all'
+        ? results
+        : results.filter(p => p.category.toLowerCase() === this.currentCategory.toLowerCase());
+      this.isSearching = false;
+    });
+  }
+
+  selectSearchResult(product: Product) {
+    // Navigate to product details
+    // You'll need to implement this method
+  }
+
+  closeSearchResults() {
+    this.showSearchResults = false;
   }
 
   ngAfterViewInit() {
@@ -696,11 +917,6 @@ export class ProductListComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  onSearch(event: Event) {
-    const searchTerm = (event.target as HTMLInputElement).value.toLowerCase();
-    this.filterProducts(searchTerm);
-  }
-
   filterByCategory(category: string) {
     this.currentCategory = category;
     if (category === 'all') {
@@ -710,13 +926,6 @@ export class ProductListComponent implements OnInit, OnDestroy, AfterViewInit {
         product.category.toLowerCase() === category.toLowerCase()
       );
     }
-  }
-
-  private filterProducts(searchTerm: string) {
-    this.filteredProducts = this.products.filter(product =>
-      product.name.toLowerCase().includes(searchTerm) ||
-      product.description.toLowerCase().includes(searchTerm)
-    );
   }
 
   isProductInCart(productId: string): boolean {

@@ -1,17 +1,36 @@
 import { Routes } from '@angular/router';
+import { ProductListComponent } from './components/product-list/product-list.component';
+import { ProductDetailsComponent } from './components/product-details/product-details.component';
+import { CartComponent } from './components/cart/cart.component';
+import { CheckoutComponent } from './components/checkout/checkout.component';
+import { OrderSuccessComponent } from './components/order-success/order-success.component';
+import { PortalComponent } from './components/portal/portal.component';
 
 export const routes: Routes = [
   {
     path: '',
-    loadComponent: () => import('./components/product-list/product-list.component').then(m => m.ProductListComponent)
+    component: ProductListComponent
   },
   {
     path: 'product/:id',
-    loadComponent: () => import('./components/product-details/product-details.component').then(m => m.ProductDetailsComponent)
+    component: ProductDetailsComponent
   },
   {
     path: 'cart',
-    loadComponent: () => import('./components/cart/cart.component').then(m => m.CartComponent)
+    component: CartComponent
+  },
+  {
+    path: 'checkout',
+    component: CheckoutComponent
+  },
+  {
+    path: 'order-success',
+    component: OrderSuccessComponent
+  },
+  {
+    path: 'portal',
+    component: PortalComponent,
+    title: 'My Downloads - Digital Marketplace'
   },
   {
     path: '**',

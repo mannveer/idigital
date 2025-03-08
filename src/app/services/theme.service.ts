@@ -1,44 +1,55 @@
 import { Injectable, PLATFORM_ID, Inject } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ThemeService {
-  private isDarkMode = new BehaviorSubject<boolean>(false);
-  private isBrowser: boolean;
+  private darkModeSubject = new BehaviorSubject<boolean>(false);
+  public isDarkMode$ = this.darkModeSubject.asObservable();
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {
-    this.isBrowser = isPlatformBrowser(this.platformId);
-    
-    if (this.isBrowser) {
-      // Check if user has a preferred theme stored
+    if (isPlatformBrowser(this.platformId)) {
+      // Check if user has a preferred theme
       const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      
       if (savedTheme) {
-        this.isDarkMode.next(savedTheme === 'dark');
+        this.setDarkMode(savedTheme === 'dark');
       } else {
-        // Check system preference
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        this.isDarkMode.next(prefersDark);
+        this.setDarkMode(prefersDark);
       }
 
-      this.isDarkMode.subscribe(isDark => {
-        if (isDark) {
-          document.body.classList.add('dark-theme');
-        } else {
-          document.body.classList.remove('dark-theme');
+      // Listen for system theme changes
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if (!localStorage.getItem('theme')) {
+          this.setDarkMode(e.matches);
         }
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
       });
     }
   }
 
-  isDarkTheme(): Observable<boolean> {
-    return this.isDarkMode.asObservable();
+  public toggleDarkMode(): void {
+    this.setDarkMode(!this.darkModeSubject.value);
   }
 
-  toggleTheme(): void {
-    this.isDarkMode.next(!this.isDarkMode.value);
+  public setDarkMode(isDark: boolean): void {
+    if (isPlatformBrowser(this.platformId)) {
+      this.darkModeSubject.next(isDark);
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      
+      if (isDark) {
+        document.documentElement.classList.add('dark-theme');
+      } else {
+        document.documentElement.classList.remove('dark-theme');
+      }
+
+      // Update meta theme-color
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', isDark ? '#1f2937' : '#ffffff');
+      }
+    }
   }
 } 
